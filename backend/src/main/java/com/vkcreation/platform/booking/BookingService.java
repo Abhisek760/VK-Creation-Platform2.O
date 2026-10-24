@@ -27,12 +27,12 @@ public class BookingService {
         String code = "VK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         Booking booking = new Booking(UUID.randomUUID().toString(), code, client, request.eventType().trim(),
                 request.eventDate(), request.eventLocation(), request.packageName(), request.notes());
-        return BookingDtos.BookingResponse.from(bookings.save(booking));
+        return response(bookings.save(booking));
     }
 
     @Transactional(readOnly = true)
     public List<BookingDtos.BookingResponse> myBookings(UserAccount client) {
-        return bookings.findByClient_IdOrderByCreatedAtDesc(client.getId()).stream().map(BookingDtos.BookingResponse::from).toList();
+        return bookings.findByClient_IdOrderByCreatedAtDesc(client.getId()).stream().map(this::response).toList();
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +51,7 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Advance cannot be reduced below payments already submitted or verified.");
         booking.setAmounts(request.totalAmount(), request.advanceAmount());
         if (booking.getStatus() == BookingStatus.PENDING) booking.setStatus(BookingStatus.APPROVED);
-        return BookingDtos.BookingResponse.from(bookings.save(booking));
+        return response(bookings.save(booking));
     }
 
     @Transactional
@@ -89,6 +89,11 @@ public class BookingService {
         }
         booking.setStatus(status);
         return BookingDtos.BookingResponse.from(bookings.save(booking));
+    }
+
+    private BookingDtos.BookingResponse response(Booking booking) {
+        BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+        return BookingDtos.BookingResponse.from(booking, verified);
     }
 
     private Booking get(String id) {
