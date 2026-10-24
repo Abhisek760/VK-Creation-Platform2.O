@@ -56,6 +56,45 @@ public class PaymentService {
         return PaymentDtos.PaymentResponse.from(payment);
     }
 
+    @Transactional
+    public PaymentDtos.PaymentResponse createGatewayPayment(String bookingId, UserAccount client, String orderId) {
+        Booking booking = bookings.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
+        if (!booking.getClient().getId().equals(client.getId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found.");
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED || booking.getStatus() == BookingStatus.COMPLETED)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payments are not accepted for this booking status.");
+        if (booking.getCurrentDueAmount().compareTo(BigDecimal.ZERO) <= 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No installment is currently due.");
+        BigDecimal submitted = payments.sumAmountByBookingAndStatuses(bookingId, List.of(PaymentStatus.SUBMITTED));
+        if (submitted.compareTo(BigDecimal.ZERO) > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "A payment is already awaiting review or gateway confirmation.");
+        Payment payment = payments.save(new Payment(UUID.randomUUID().toString(), booking, booking.getCurrentDueAmount(), "PHONEPE", orderId, null));
+        if (booking.getStatus() == BookingStatus.APPROVED) booking.setStatus(BookingStatus.AWAITING_PAYMENT);
+        return PaymentDtos.PaymentResponse.from(payment);
+    }
+
+    @Transactional
+    public PaymentDtos.PaymentResponse confirmGatewayPayment(String orderId, String transactionId, BigDecimal paidAmount) {
+        Payment payment = payments.findFirstByMethodAndProviderReference("PHONEPE", orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gateway payment order not found."));
+        Booking booking = bookings.findByIdForUpdate(payment.getBooking().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
+        payment = payments.findFirstByMethodAndProviderReference("PHONEPE", orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gateway payment order not found."));
+        if (payment.getStatus() == PaymentStatus.VERIFIED) return PaymentDtos.PaymentResponse.from(payment);
+        if (payment.getStatus() != PaymentStatus.SUBMITTED) throw new ResponseStatusException(HttpStatus.CONFLICT, "This payment is no longer pending.");
+        if (paidAmount.compareTo(payment.getAmount()) != 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Gateway-reported amount does not match the installment.");
+        BigDecimal alreadyVerified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+        BigDecimal after = alreadyVerified.add(payment.getAmount());
+        if (after.compareTo(booking.getTotalAmount()) > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Gateway payment would exceed booking total.");
+        payment.setGatewayTransactionReference(transactionId);
+        payment.verify(null);
+        booking.setCurrentDueAmount(BigDecimal.ZERO);
+        if (after.compareTo(booking.getTotalAmount()) >= 0) booking.setStatus(BookingStatus.COMPLETED);
+        else if (after.compareTo(booking.getAdvanceAmount()) >= 0) booking.setStatus(BookingStatus.CONFIRMED);
+        else booking.setStatus(BookingStatus.AWAITING_PAYMENT);
+        payments.save(payment);
+        return PaymentDtos.PaymentResponse.from(payment);
+    }
+
     @Transactional(readOnly = true)
     public String receiptHtml(String paymentId, UserAccount client) {
         Payment payment = payments.findById(paymentId)
