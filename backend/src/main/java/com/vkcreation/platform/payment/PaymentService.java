@@ -23,7 +23,7 @@ public class PaymentService {
 
     @Transactional
     public PaymentDtos.PaymentResponse submit(String bookingId, UserAccount client, PaymentDtos.SubmitRequest request) {
-        Booking booking = bookings.findById(bookingId)
+        Booking booking = bookings.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
         if (!booking.getClient().getId().equals(client.getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found.");
@@ -101,10 +101,18 @@ public class PaymentService {
     public PaymentDtos.PaymentResponse verify(String id, UserAccount admin, boolean approved) {
         Payment payment = payments.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found."));
+        String bookingId = payment.getBooking().getId();
+        Booking booking = bookings.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
+        // Reload the payment after acquiring the booking lock so concurrent reviews cannot use stale state.
+        payment = payments.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found."));
+        if (!payment.getBooking().getId().equals(booking.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment booking changed during review.");
+        }
         if (payment.getStatus() != PaymentStatus.SUBMITTED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment has already been reviewed.");
         }
-        Booking booking = payment.getBooking();
         if (approved) {
             BigDecimal alreadyVerified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
             BigDecimal totalAfterPayment = alreadyVerified.add(payment.getAmount());
