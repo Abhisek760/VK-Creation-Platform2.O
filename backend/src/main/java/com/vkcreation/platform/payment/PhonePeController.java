@@ -34,20 +34,20 @@ public class PhonePeController {
  @PostMapping("/start/{bookingId}") @PreAuthorize("hasRole('CLIENT')")
  public StartResponse start(@PathVariable String bookingId,@AuthenticationPrincipal UserAccount client){
   requireConfigured();
-  var booking=bookings.findByIdForUpdate(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found."));
+  var booking=bookings.findById(bookingId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found."));
   if(!booking.getClient().getId().equals(client.getId()))throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found.");
   if(booking.getCurrentDueAmount()==null||booking.getCurrentDueAmount().compareTo(BigDecimal.ZERO)<=0)throw new ResponseStatusException(HttpStatus.CONFLICT,"No installment is currently due.");
   String orderId="VK"+UUID.randomUUID().toString().replace("-","").substring(0,24).toUpperCase(Locale.ROOT);
-  long amount=booking.getCurrentDueAmount().multiply(new BigDecimal("100")).setScale(0,RoundingMode.UNNECESSARY).longValueExact();
-  Map<String,Object> body=new LinkedHashMap<>();body.put("merchantOrderId",orderId);body.put("amount",amount);body.put("expireAfter",1200);
-  Map<String,Object> flow=new LinkedHashMap<>();flow.put("type","PG_CHECKOUT");flow.put("message","VK Creation installment payment");flow.put("merchantUrls",Map.of("redirectUrl",redirectUrl));body.put("paymentFlow",flow);
   String token;
   try {
    token=accessToken();
   } catch (Exception e) {
    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"Could not authenticate with PhonePe. No payment order was reserved; check merchant credentials and try again.");
   }
-  paymentService.createGatewayPayment(bookingId,client,orderId);
+  PaymentDtos.PaymentResponse reservedPayment=paymentService.createGatewayPayment(bookingId,client,orderId);
+  long amount=reservedPayment.amount().multiply(new BigDecimal("100")).setScale(0,RoundingMode.UNNECESSARY).longValueExact();
+  Map<String,Object> body=new LinkedHashMap<>();body.put("merchantOrderId",orderId);body.put("amount",amount);body.put("expireAfter",1200);
+  Map<String,Object> flow=new LinkedHashMap<>();flow.put("type","PG_CHECKOUT");flow.put("message","VK Creation installment payment");flow.put("merchantUrls",Map.of("redirectUrl",redirectUrl));body.put("paymentFlow",flow);
   try{
    Map response=http.post().uri(baseUrl+"/checkout/v2/pay").header("Authorization","O-Bearer "+token).contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(Map.class);
    if(response==null)throw new IllegalStateException("Empty response from PhonePe.");
