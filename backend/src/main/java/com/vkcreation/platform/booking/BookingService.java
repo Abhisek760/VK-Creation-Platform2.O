@@ -95,7 +95,7 @@ public class BookingService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking can only be confirmed after the full advance payment is verified.");
         }
         booking.setStatus(status);
-        return BookingDtos.BookingResponse.from(bookings.save(booking));
+        return response(bookings.save(booking));
     }
 
     @Transactional(readOnly = true)
