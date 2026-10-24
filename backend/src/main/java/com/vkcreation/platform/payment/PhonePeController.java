@@ -50,7 +50,7 @@ public class PhonePeController {
    Object url=data.get("redirectUrl");
    if(!(url instanceof String)||((String)url).isBlank())throw new IllegalStateException("PhonePe did not return a checkout URL.");
    return new StartResponse(orderId,(String)url,"PENDING","Continue to PhonePe to complete your installment payment.");
-  }catch(ResponseStatusException e){paymentService.failGatewayPayment(orderId);throw e;}catch(Exception e){paymentService.failGatewayPayment(orderId);throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"Could not start PhonePe checkout. Check gateway configuration and server logs.");}
+  }catch(ResponseStatusException e){throw e;}catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"Could not start PhonePe checkout. If the provider may have received the request, check payment status before retrying.");}
  }
  @GetMapping("/status/{orderId}") @PreAuthorize("hasRole('CLIENT')")
  public Map<String,Object> status(@PathVariable String orderId,@AuthenticationPrincipal UserAccount client){
@@ -68,6 +68,8 @@ public class PhonePeController {
     Object details=data.get("paymentDetails");
     if(details instanceof List list&&!list.isEmpty()&&list.get(0) instanceof Map first)txn=String.valueOf(first.getOrDefault("transactionId",orderId));
     paymentService.confirmGatewayPayment(orderId,txn,BigDecimal.valueOf(paise,2));
+   } else if ("FAILED".equalsIgnoreCase(state) || "EXPIRED".equalsIgnoreCase(state) || "CANCELLED".equalsIgnoreCase(state)) {
+    paymentService.failGatewayPayment(orderId);
    }
    return Map.of("orderId",orderId,"gatewayState",state,"paymentStatus",payments.findFirstByMethodAndProviderReference("PHONEPE",orderId).map(p->p.getStatus().name()).orElse("UNKNOWN"),"message","Only a server-verified COMPLETED gateway status is counted as paid.");
   }catch(ResponseStatusException e){throw e;}catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"Could not verify PhonePe status. Try again shortly.");}
