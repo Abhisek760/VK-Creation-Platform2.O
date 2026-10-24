@@ -38,7 +38,7 @@ public class Booking {
     public String getEventType(){return eventType;} public LocalDate getEventDate(){return eventDate;} public String getEventLocation(){return eventLocation;}
     public String getPackageName(){return packageName;} public BigDecimal getTotalAmount(){return totalAmount;} public BigDecimal getAdvanceAmount(){return advanceAmount;} public BigDecimal getCurrentDueAmount(){return currentDueAmount;}
     public BookingStatus getStatus(){return status;} public String getNotes(){return notes;}
-    public void setAmounts(BigDecimal total, BigDecimal advance){this.totalAmount=total; this.advanceAmount=advance; this.currentDueAmount=advance;}
+    public void setAmounts(BigDecimal total, BigDecimal advance){if(this.totalAmount.compareTo(BigDecimal.ZERO)==0 && this.currentDueAmount.compareTo(BigDecimal.ZERO)==0){this.currentDueAmount=advance;} this.totalAmount=total; this.advanceAmount=advance;}
     public void setCurrentDueAmount(BigDecimal amount){this.currentDueAmount=amount;}
     public void setStatus(BookingStatus status){this.status=status;}
 }
