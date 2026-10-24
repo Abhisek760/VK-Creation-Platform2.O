@@ -66,12 +66,22 @@ public class PhonePeController {
    Map response=http.get().uri(baseUrl+"/checkout/v2/order/"+orderId+"/status?details=true").header("Authorization","O-Bearer "+accessToken()).retrieve().body(Map.class);
    if(response==null)throw new IllegalStateException("Empty response from PhonePe.");
    Map data=response.get("data") instanceof Map?(Map)response.get("data"):response;
+   Object returnedOrderId=data.get("orderId");
+   if(returnedOrderId instanceof String returned && !returned.isBlank() && !orderId.equals(returned))
+    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"PhonePe returned a status for a different order. Payment was not confirmed.");
    String state=String.valueOf(data.getOrDefault("state","PENDING"));
    if("COMPLETED".equalsIgnoreCase(state)){
-    long paise=((Number)data.getOrDefault("amount",0)).longValue();
-    String txn=orderId;
+    Object amountValue=data.get("amount");
+    if(!(amountValue instanceof Number)) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"PhonePe status did not include a valid paid amount. Payment was not confirmed.");
+    long paise=((Number)amountValue).longValue();
+    if(paise<=0) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"PhonePe reported an invalid paid amount. Payment was not confirmed.");
+    String txn=null;
     Object details=data.get("paymentDetails");
-    if(details instanceof List list&&!list.isEmpty()&&list.get(0) instanceof Map first)txn=String.valueOf(first.getOrDefault("transactionId",orderId));
+    if(details instanceof List list&&!list.isEmpty()&&list.get(0) instanceof Map first){
+     Object transactionValue=first.get("transactionId");
+     if(transactionValue instanceof String transaction && !transaction.isBlank()) txn=transaction;
+    }
+    if(txn==null) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"PhonePe status did not include a transaction reference. Payment was not confirmed.");
     paymentService.confirmGatewayPayment(orderId,txn,BigDecimal.valueOf(paise,2));
    } else if ("FAILED".equalsIgnoreCase(state) || "EXPIRED".equalsIgnoreCase(state) || "CANCELLED".equalsIgnoreCase(state)) {
     paymentService.failGatewayPayment(orderId);
