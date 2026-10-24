@@ -19,10 +19,11 @@ public final class BookingDtos {
                                   String clientPhone, String eventType, LocalDate eventDate, String eventLocation,
                                   String packageName, BigDecimal totalAmount, BigDecimal advanceAmount, BigDecimal currentDueAmount,
                                   BigDecimal remainingBalance, BookingStatus status, String notes) {
-        static BookingResponse from(Booking b) {
+        static BookingResponse from(Booking b) { return from(b, b.getAdvanceAmount()); }
+        static BookingResponse from(Booking b, BigDecimal paidAmount) {
             return new BookingResponse(b.getId(), b.getBookingCode(), b.getClientName(), b.getClientEmail(),
                     b.getClientPhone(), b.getEventType(), b.getEventDate(), b.getEventLocation(), b.getPackageName(),
-                    b.getTotalAmount(), b.getAdvanceAmount(), b.getCurrentDueAmount(), b.getTotalAmount().subtract(b.getAdvanceAmount()),
+                    b.getTotalAmount(), b.getAdvanceAmount(), b.getCurrentDueAmount(), b.getTotalAmount().subtract(paidAmount),
                     b.getStatus(), b.getNotes());
         }
     }
