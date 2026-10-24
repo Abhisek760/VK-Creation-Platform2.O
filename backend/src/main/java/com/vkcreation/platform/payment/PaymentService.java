@@ -107,6 +107,7 @@ public class PaymentService {
         BigDecimal alreadyVerified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
         BigDecimal after = alreadyVerified.add(payment.getAmount());
         if (after.compareTo(booking.getTotalAmount()) > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Gateway payment would exceed booking total.");
+        payment.setGatewayTransactionReference(transactionId);
         payment.verify(null);
         booking.setCurrentDueAmount(BigDecimal.ZERO);
         if (after.compareTo(booking.getTotalAmount()) >= 0) booking.setStatus(BookingStatus.COMPLETED);
