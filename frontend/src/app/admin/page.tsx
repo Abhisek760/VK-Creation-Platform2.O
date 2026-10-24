@@ -4,7 +4,7 @@ type Booking={id:string;bookingCode:string;clientName:string;clientEmail:string;
 type Payment={id:string;bookingId:string;amount:number;method:string;status:string;providerReference?:string;proofUrl?:string};
 const api=process.env.NEXT_PUBLIC_API_URL||"http://localhost:8080";
 export default function Admin(){const [bookings,setBookings]=useState<Booking[]>([]);const [payments,setPayments]=useState<Payment[]>([]);const [message,setMessage]=useState("");const [token,setToken]=useState("");const [search,setSearch]=useState("");
-async function request(path:string,init:RequestInit={}){const res=await fetch(api+path,{...init,headers:{"Content-Type":"application/json",Authorization:"Bearer "+token,...init.headers}});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||"Request failed");return data;}
+async function request(path:string,init:RequestInit={}){const res=await fetch(api+path,{...init,headers:{"Content-Type":"application/json",Authorization:"Bearer "+token,...init.headers}});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||data.detail||data.title||"Request failed");return data;}
 async function load(){try{setBookings(await request("/api/bookings"));setPayments(await request("/api/payments"));setMessage("");}catch(e){setMessage(e instanceof Error?e.message:"Could not load admin data.");}}
 useEffect(()=>{setToken(sessionStorage.getItem("vk_access_token")||"")},[]);
 useEffect(()=>{if(token)load()},[token]);
