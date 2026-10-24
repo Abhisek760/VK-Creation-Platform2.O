@@ -1,7 +1,8 @@
 package com.vkcreation.platform.booking;
 
+import com.vkcreation.platform.payment.PaymentRepository;
+import com.vkcreation.platform.payment.PaymentStatus;
 import com.vkcreation.platform.user.UserAccount;
-import com.vkcreation.platform.user.UserRole;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +15,12 @@ import java.util.UUID;
 @Service
 public class BookingService {
     private final BookingRepository bookings;
-    public BookingService(BookingRepository bookings) { this.bookings = bookings; }
+    private final PaymentRepository payments;
+
+    public BookingService(BookingRepository bookings, PaymentRepository payments) {
+        this.bookings = bookings;
+        this.payments = payments;
+    }
 
     @Transactional
     public BookingDtos.BookingResponse create(UserAccount client, BookingDtos.CreateRequest request) {
@@ -38,17 +44,28 @@ public class BookingService {
     public BookingDtos.BookingResponse setAmounts(String id, BookingDtos.AmountRequest request) {
         if (request.advanceAmount().compareTo(request.totalAmount()) > 0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Advance cannot exceed total amount.");
-        Booking b = get(id);
-        b.setAmounts(request.totalAmount(), request.advanceAmount());
-        if (b.getStatus() == BookingStatus.PENDING) b.setStatus(BookingStatus.APPROVED);
-        return BookingDtos.BookingResponse.from(bookings.save(b));
+        Booking booking = get(id);
+        BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+        BigDecimal submitted = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.SUBMITTED));
+        if (request.advanceAmount().compareTo(verified) < 0 || request.advanceAmount().compareTo(submitted.add(verified)) < 0)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Advance cannot be reduced below payments already submitted or verified.");
+        booking.setAmounts(request.totalAmount(), request.advanceAmount());
+        if (booking.getStatus() == BookingStatus.PENDING) booking.setStatus(BookingStatus.APPROVED);
+        return BookingDtos.BookingResponse.from(bookings.save(booking));
     }
 
     @Transactional
     public BookingDtos.BookingResponse setStatus(String id, BookingStatus status) {
-        Booking b = get(id);
-        b.setStatus(status);
-        return BookingDtos.BookingResponse.from(bookings.save(b));
+        Booking booking = get(id);
+        if (status == BookingStatus.CONFIRMED) {
+            if (booking.getAdvanceAmount().compareTo(BigDecimal.ZERO) <= 0)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Set an advance amount before confirming this booking.");
+            BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+            if (verified.compareTo(booking.getAdvanceAmount()) < 0)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking can only be confirmed after the full advance payment is verified.");
+        }
+        booking.setStatus(status);
+        return BookingDtos.BookingResponse.from(bookings.save(booking));
     }
 
     private Booking get(String id) {
