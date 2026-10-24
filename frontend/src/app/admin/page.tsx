@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 type Booking={id:string;bookingCode:string;clientName:string;clientEmail:string;eventType:string;eventDate:string;totalAmount:number;advanceAmount:number;currentDueAmount:number;remainingBalance:number;status:string};
-type Payment={id:string;bookingId:string;amount:number;method:string;status:string;providerReference?:string};
+type Payment={id:string;bookingId:string;amount:number;method:string;status:string;providerReference?:string;proofUrl?:string};
 const api=process.env.NEXT_PUBLIC_API_URL||"http://localhost:8080";
 export default function Admin(){const [bookings,setBookings]=useState<Booking[]>([]);const [payments,setPayments]=useState<Payment[]>([]);const [message,setMessage]=useState("");const [token,setToken]=useState("");const [search,setSearch]=useState("");
 async function request(path:string,init:RequestInit={}){const res=await fetch(api+path,{...init,headers:{"Content-Type":"application/json",Authorization:"Bearer "+token,...init.headers}});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||"Request failed");return data;}
