@@ -72,6 +72,16 @@ public class PaymentService {
     }
 
     @Transactional
+    public void failGatewayPayment(String orderId) {
+        payments.findFirstByMethodAndProviderReference("PHONEPE", orderId).ifPresent(payment -> {
+            if (payment.getStatus() == PaymentStatus.SUBMITTED) {
+                payment.reject(null);
+                payments.save(payment);
+            }
+        });
+    }
+
+    @Transactional
     public PaymentDtos.PaymentResponse confirmGatewayPayment(String orderId, String transactionId, BigDecimal paidAmount) {
         Payment payment = payments.findFirstByMethodAndProviderReference("PHONEPE", orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gateway payment order not found."));
