@@ -23,5 +23,6 @@ public class Payment {
  public PaymentStatus getStatus(){return status;} public String getProviderReference(){return providerReference;} public String getProofUrl(){return proofUrl;}
  public UserAccount getVerifiedBy(){return verifiedBy;} public LocalDateTime getVerifiedAt(){return verifiedAt;}
  public void verify(UserAccount admin){status=PaymentStatus.VERIFIED;verifiedBy=admin;verifiedAt=LocalDateTime.now();receiptNumber="VK-RCPT-"+java.time.Year.now().getValue()+"-"+id.substring(0,8).toUpperCase();}
+ public void setGatewayTransactionReference(String reference){if(reference!=null && !reference.isBlank())this.providerReference=reference;}
  public void reject(UserAccount admin){status=PaymentStatus.REJECTED;verifiedBy=admin;verifiedAt=LocalDateTime.now();}
 }
