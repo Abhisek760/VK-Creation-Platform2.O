@@ -76,7 +76,7 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Installment cannot exceed the remaining total balance of " + remaining + ".");
         }
         booking.setCurrentDueAmount(request.amount());
-        return BookingDtos.BookingResponse.from(bookings.save(booking));
+        return response(bookings.save(booking));
     }
 
     @Transactional
