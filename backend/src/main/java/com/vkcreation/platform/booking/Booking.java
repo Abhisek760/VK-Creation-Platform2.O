@@ -21,6 +21,7 @@ public class Booking {
     @Column(name="package_name", length=160) private String packageName;
     @Column(name="total_amount", nullable=false, precision=12, scale=2) private BigDecimal totalAmount=BigDecimal.ZERO;
     @Column(name="advance_amount", nullable=false, precision=12, scale=2) private BigDecimal advanceAmount=BigDecimal.ZERO;
+    @Column(name="current_due_amount", nullable=false, precision=12, scale=2) private BigDecimal currentDueAmount=BigDecimal.ZERO;
     @Enumerated(EnumType.STRING) @Column(nullable=false, length=32) private BookingStatus status=BookingStatus.PENDING;
     @Column(columnDefinition="TEXT") private String notes;
     @Column(name="created_at", insertable=false, updatable=false) private LocalDateTime createdAt;
@@ -35,8 +36,9 @@ public class Booking {
     public String getId(){return id;} public String getBookingCode(){return bookingCode;} public UserAccount getClient(){return client;}
     public String getClientName(){return clientName;} public String getClientEmail(){return clientEmail;} public String getClientPhone(){return clientPhone;}
     public String getEventType(){return eventType;} public LocalDate getEventDate(){return eventDate;} public String getEventLocation(){return eventLocation;}
-    public String getPackageName(){return packageName;} public BigDecimal getTotalAmount(){return totalAmount;} public BigDecimal getAdvanceAmount(){return advanceAmount;}
+    public String getPackageName(){return packageName;} public BigDecimal getTotalAmount(){return totalAmount;} public BigDecimal getAdvanceAmount(){return advanceAmount;} public BigDecimal getCurrentDueAmount(){return currentDueAmount;}
     public BookingStatus getStatus(){return status;} public String getNotes(){return notes;}
-    public void setAmounts(BigDecimal total, BigDecimal advance){this.totalAmount=total; this.advanceAmount=advance;}
+    public void setAmounts(BigDecimal total, BigDecimal advance){this.totalAmount=total; this.advanceAmount=advance; this.currentDueAmount=advance;}
+    public void setCurrentDueAmount(BigDecimal amount){this.currentDueAmount=amount;}
     public void setStatus(BookingStatus status){this.status=status;}
 }
