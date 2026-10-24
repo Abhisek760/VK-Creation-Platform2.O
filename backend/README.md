@@ -36,8 +36,8 @@ Do not use the development fallback for JWT in production. Configure a strong se
 - `POST /api/bookings/{id}/payments` — client submits the currently due installment and proof/reference for manual review
 - `GET /api/payments/my` — client's payment history
 - `PATCH /api/payments/{id}/verify` — admin verifies or rejects a submitted payment
-- `GET /api/payments/{id}/receipt` — client's printable receipt for a verified installment
-- `GET /api/bookings/{id}/final-bill` — client's printable final bill after the full total is verified
+- `GET /api/payments/{id}/receipt` and `GET /api/payments/{id}/receipt.pdf` — HTML/PDF receipt for a verified installment
+- `GET /api/bookings/{id}/final-bill` and `GET /api/bookings/{id}/final-bill.pdf` — HTML/PDF final bill after the full total is verified
 - `GET /api/packages` — active public package list; admin CRUD under `/api/packages`
 - `GET /api/gallery` — published portfolio media; admin CRUD under `/api/gallery`
 - `POST /api/media/signature` — admin-only Cloudinary upload signature
