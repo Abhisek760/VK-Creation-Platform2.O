@@ -136,7 +136,7 @@ public class PaymentService {
                 "<p><b>Client:</b> " + html(booking.getClientName()) + "</p>" +
                 "<p><b>Event:</b> " + html(booking.getEventType()) + "</p>" +
                 "<p><b>Payment method:</b> " + html(payment.getMethod()) + "</p>" +
-                "<p><b>Transaction reference:</b> " + html(payment.getProviderReference() == null ? "—" : payment.getProviderReference()) + "</p>" +
+                "<p><b>Transaction reference:</b> " + html(payment.getGatewayTransactionReference() != null ? payment.getGatewayTransactionReference() : (payment.getProviderReference() == null ? "—" : payment.getProviderReference())) + "</p>" +
                 "<p><b>Verified at:</b> " + html(String.valueOf(payment.getVerifiedAt())) + "</p>" +
                 "<div class=\"line\"></div><p class=\"amount\">Amount received: ₹" + payment.getAmount().toPlainString() + "</p>" +
                 "<p class=\"muted\">This receipt represents a payment verified by VK Creation.</p><script>window.print()</script></body></html>";
