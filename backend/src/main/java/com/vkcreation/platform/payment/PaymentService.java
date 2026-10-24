@@ -48,8 +48,20 @@ public class PaymentService {
         if (request.amount().compareTo(remaining) > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment cannot exceed the remaining total balance of " + remaining + ".");
         }
+        String method = request.method().trim().toUpperCase(java.util.Locale.ROOT);
+        if (!List.of("UPI", "BANK_TRANSFER", "CASH", "OTHER").contains(method)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Manual payment method must be UPI, BANK_TRANSFER, CASH, or OTHER. Use the PhonePe checkout for gateway payments.");
+        }
+        if (request.proofUrl() != null && !request.proofUrl().isBlank()) {
+            try {
+                java.net.URI proof = java.net.URI.create(request.proofUrl().trim());
+                if (!"https".equalsIgnoreCase(proof.getScheme()) || proof.getHost() == null) throw new IllegalArgumentException();
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment proof URL must be a valid HTTPS URL.");
+            }
+        }
         Payment payment = payments.save(new Payment(UUID.randomUUID().toString(), booking, request.amount(),
-                request.method().trim(), request.providerReference(), request.proofUrl()));
+                method, request.providerReference() == null ? null : request.providerReference().trim(), request.proofUrl() == null ? null : request.proofUrl().trim()));
         if (booking.getStatus() == BookingStatus.APPROVED) {
             booking.setStatus(BookingStatus.AWAITING_PAYMENT);
         }
