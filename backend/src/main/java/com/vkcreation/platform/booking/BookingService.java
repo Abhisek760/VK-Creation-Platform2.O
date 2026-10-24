@@ -44,7 +44,7 @@ public class BookingService {
     public BookingDtos.BookingResponse setAmounts(String id, BookingDtos.AmountRequest request) {
         if (request.advanceAmount().compareTo(request.totalAmount()) > 0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Advance cannot exceed total amount.");
-        Booking booking = get(id);
+        Booking booking = bookings.findByIdForUpdate(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
         BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
         BigDecimal submitted = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.SUBMITTED));
         if (request.advanceAmount().compareTo(verified) < 0 || request.advanceAmount().compareTo(submitted.add(verified)) < 0)
@@ -58,7 +58,7 @@ public class BookingService {
 
     @Transactional
     public BookingDtos.BookingResponse setInstallment(String id, BookingDtos.InstallmentRequest request) {
-        Booking booking = get(id);
+        Booking booking = bookings.findByIdForUpdate(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
         if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED
                 || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot set an installment for this booking status.");
@@ -81,7 +81,12 @@ public class BookingService {
 
     @Transactional
     public BookingDtos.BookingResponse setStatus(String id, BookingStatus status) {
-        Booking booking = get(id);
+        Booking booking = bookings.findByIdForUpdate(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
+        if (status == BookingStatus.COMPLETED) {
+            BigDecimal totalVerified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+            if (totalVerified.compareTo(booking.getTotalAmount()) < 0)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "A booking can only be marked completed after the full total is verified as paid.");
+        }
         if (status == BookingStatus.CONFIRMED) {
             if (booking.getAdvanceAmount().compareTo(BigDecimal.ZERO) <= 0)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Set an advance amount before confirming this booking.");
