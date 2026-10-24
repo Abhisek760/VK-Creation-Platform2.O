@@ -42,7 +42,7 @@ See [backend/README.md](backend/README.md) for backend configuration details. Ne
 - Admins can set booking totals and the initial advance, change booking status, and set subsequent installment amounts.
 - Clients submit a payment method, transaction reference, and proof URL for manual review. **A submitted proof is not a payment confirmation.** The admin must verify it.
 - The client must submit the currently configured installment amount. A new installment cannot be set while a submitted payment is awaiting review.
-- A unique receipt number and printable receipt page are available for each verified installment. A printable final bill becomes available only when verified payments cover the full booking total.
+- A unique receipt number and generated PDF receipt are available for each verified installment. A generated PDF final bill becomes available only when verified payments cover the full booking total.
 - Booking-row locking is used to serialize installment submissions and payment reviews against concurrent requests.
 
 ## API routes
@@ -50,7 +50,7 @@ See [backend/README.md](backend/README.md) for backend configuration details. Ne
 - `POST /api/auth/register`, `POST /api/auth/login`
 - Client: `POST /api/bookings`, `GET /api/bookings/my`
 - Admin: `GET /api/bookings`, `PATCH /api/bookings/{id}/advance`, `PATCH /api/bookings/{id}/installment`, `PATCH /api/bookings/{id}/status`
-- Client: `POST /api/bookings/{id}/payments`, `GET /api/payments/my`, `GET /api/payments/{id}/receipt`, `GET /api/bookings/{id}/final-bill`
+- Client: `POST /api/bookings/{id}/payments`, `GET /api/payments/my`, `GET /api/payments/{id}/receipt`, `GET /api/payments/{id}/receipt.pdf`, `GET /api/bookings/{id}/final-bill`, `GET /api/bookings/{id}/final-bill.pdf`
 - Admin: `GET /api/payments`, `PATCH /api/payments/{id}/verify`
 - PhonePe: `POST /api/payments/phonepe/start/{bookingId}`, `GET /api/payments/phonepe/status/{orderId}`
 
