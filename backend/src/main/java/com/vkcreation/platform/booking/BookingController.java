@@ -1,6 +1,7 @@
 package com.vkcreation.platform.booking;
 
 import com.vkcreation.platform.user.UserAccount;
+import com.vkcreation.platform.common.PdfDocumentService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,8 @@ import java.util.List;
 @RequestMapping("/api/bookings")
 public class BookingController {
     private final BookingService service;
-    public BookingController(BookingService service) { this.service=service; }
+    private final PdfDocumentService pdf;
+    public BookingController(BookingService service, PdfDocumentService pdf) { this.service=service; this.pdf=pdf; }
 
     @PostMapping
     @PreAuthorize("hasRole('CLIENT')")
@@ -38,6 +40,16 @@ public class BookingController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vk-final-bill.html")
                 .contentType(MediaType.TEXT_HTML)
                 .body(service.finalBillHtml(id, user));
+    }
+
+    @GetMapping(value = "/{id}/final-bill.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<byte[]> finalBillPdf(@PathVariable String id, @AuthenticationPrincipal UserAccount user) {
+        byte[] bytes = pdf.fromHtml(service.finalBillHtml(id, user));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vk-final-bill.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(bytes);
     }
 
     @PatchMapping("/{id}/advance")
