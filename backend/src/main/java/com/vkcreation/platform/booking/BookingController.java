@@ -1,6 +1,9 @@
 package com.vkcreation.platform.booking;
 
 import com.vkcreation.platform.user.UserAccount;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +30,15 @@ public class BookingController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<BookingDtos.BookingResponse> all() { return service.all(); }
+
+    @GetMapping(value = "/{id}/final-bill", produces = MediaType.TEXT_HTML_VALUE)
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<String> finalBill(@PathVariable String id, @AuthenticationPrincipal UserAccount user) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vk-final-bill.html")
+                .contentType(MediaType.TEXT_HTML)
+                .body(service.finalBillHtml(id, user));
+    }
 
     @PatchMapping("/{id}/advance")
     @PreAuthorize("hasRole('ADMIN')")
