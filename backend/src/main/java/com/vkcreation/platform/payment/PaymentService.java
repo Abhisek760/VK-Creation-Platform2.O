@@ -85,12 +85,17 @@ public class PaymentService {
 
     @Transactional
     public void failGatewayPayment(String orderId) {
-        payments.findFirstByMethodAndProviderReference("PHONEPE", orderId).ifPresent(payment -> {
-            if (payment.getStatus() == PaymentStatus.SUBMITTED) {
-                payment.reject(null);
-                payments.save(payment);
-            }
-        });
+        Payment payment = payments.findFirstByMethodAndProviderReference("PHONEPE", orderId).orElse(null);
+        if (payment == null) return;
+        String bookingId = payment.getBooking().getId();
+        bookings.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found."));
+        // Reload after the booking lock: a concurrent status poll may have confirmed this payment.
+        payment = payments.findFirstByMethodAndProviderReference("PHONEPE", orderId).orElse(null);
+        if (payment != null && payment.getStatus() == PaymentStatus.SUBMITTED) {
+            payment.reject(null);
+            payments.save(payment);
+        }
     }
 
     @Transactional
