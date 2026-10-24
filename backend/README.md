@@ -28,9 +28,13 @@ Do not use the development fallback for JWT in production. Configure a strong se
 - `POST /api/bookings` — authenticated client creates a booking
 - `GET /api/bookings/my` — client's own bookings
 - `GET /api/bookings` — admin booking list
-- `PATCH /api/bookings/{id}/advance` — admin sets advance
-- `PATCH /api/bookings/{id}/status` — admin updates status
-- `POST /api/bookings/{id}/payments` — client submits a payment reference for verification
+- `PATCH /api/bookings/{id}/advance` — admin sets total and initial advance
+- `PATCH /api/bookings/{id}/installment` — admin sets the next installment amount
+- `PATCH /api/bookings/{id}/status` — admin updates status (confirmation is blocked until the advance is verified)
+- `POST /api/bookings/{id}/payments` — client submits the currently due installment and proof/reference for manual review
+- `GET /api/payments/my` — client's payment history
 - `PATCH /api/payments/{id}/verify` — admin verifies or rejects a submitted payment
+- `GET /api/payments/{id}/receipt` — client's printable receipt for a verified installment
+- `GET /api/bookings/{id}/final-bill` — client's printable final bill after the full total is verified
 
-Payment references are never treated as verified merely because a client submits them. A real payment gateway integration is a separate deployment step.
+Payment references are never treated as verified merely because a client submits them. Booking-row locks serialize installment submission and payment review operations. Receipt and final-bill endpoints return printable HTML (not PDF). A real payment gateway/webhook integration, media/package management, notifications, and end-to-end deployment verification remain separate work before production.
