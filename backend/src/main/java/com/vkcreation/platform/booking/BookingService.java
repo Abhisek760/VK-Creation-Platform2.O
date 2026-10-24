@@ -37,7 +37,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingDtos.BookingResponse> all() {
-        return bookings.findAll().stream().map(BookingDtos.BookingResponse::from).toList();
+        return bookings.findAll().stream().map(this::response).toList();
     }
 
     @Transactional
@@ -49,6 +49,8 @@ public class BookingService {
         BigDecimal submitted = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.SUBMITTED));
         if (request.advanceAmount().compareTo(verified) < 0 || request.advanceAmount().compareTo(submitted.add(verified)) < 0)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Advance cannot be reduced below payments already submitted or verified.");
+        if (request.totalAmount().compareTo(verified) < 0 || request.totalAmount().compareTo(submitted.add(verified)) < 0)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Total amount cannot be reduced below payments already submitted or verified.");
         booking.setAmounts(request.totalAmount(), request.advanceAmount());
         if (booking.getStatus() == BookingStatus.PENDING) booking.setStatus(BookingStatus.APPROVED);
         return response(bookings.save(booking));
