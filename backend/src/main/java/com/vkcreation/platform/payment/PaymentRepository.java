@@ -5,10 +5,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment,String> {
  List<Payment> findByBooking_Client_IdOrderByCreatedAtDesc(String clientId);
  List<Payment> findByBooking_IdOrderByCreatedAtAsc(String bookingId);
+ Optional<Payment> findFirstByMethodAndProviderReference(String method,String providerReference);
  @Query("select coalesce(sum(p.amount), 0) from Payment p where p.booking.id = :bookingId and p.status in :statuses")
  BigDecimal sumAmountByBookingAndStatuses(@Param("bookingId") String bookingId, @Param("statuses") List<PaymentStatus> statuses);
 }
