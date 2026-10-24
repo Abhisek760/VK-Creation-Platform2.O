@@ -25,6 +25,7 @@ export default defineConfig([
       ...nextPlugin.configs["core-web-vitals"].rules,
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "no-undef": "off",
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
 ]);
