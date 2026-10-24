@@ -91,6 +91,36 @@ public class BookingService {
         return BookingDtos.BookingResponse.from(bookings.save(booking));
     }
 
+    @Transactional(readOnly = true)
+    public String finalBillHtml(String id, UserAccount client) {
+        Booking booking = get(id);
+        if (!booking.getClient().getId().equals(client.getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found.");
+        }
+        BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+        if (verified.compareTo(booking.getTotalAmount()) < 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Final bill is available only after the full booking amount is verified as paid.");
+        }
+        StringBuilder rows = new StringBuilder();
+        payments.findByBooking_IdOrderByCreatedAtAsc(booking.getId()).stream()
+                .filter(p -> p.getStatus() == PaymentStatus.VERIFIED)
+                .forEach(p -> rows.append("<tr><td>").append(html(p.getReceiptNumber() == null ? "—" : p.getReceiptNumber()))
+                        .append("</td><td>").append(html(p.getVerifiedAt() == null ? "—" : p.getVerifiedAt().toString()))
+                        .append("</td><td>₹").append(p.getAmount().toPlainString()).append("</td></tr>"));
+        return "<!doctype html><html><head><meta charset=\"utf-8\"><title>Final Bill</title><style>body{font:16px Arial,sans-serif;max-width:800px;margin:40px auto;padding:24px;color:#222}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}.amount{font-size:24px;font-weight:bold}</style></head><body>" +
+                "<h1>VK Creation</h1><h2>Final Bill</h2><p><b>Booking:</b> " + html(booking.getBookingCode()) +
+                "</p><p><b>Client:</b> " + html(booking.getClientName()) + "</p><p><b>Event:</b> " + html(booking.getEventType()) +
+                "</p><p><b>Event date:</b> " + html(booking.getEventDate().toString()) + "</p><hr><p>Total booking amount: ₹" +
+                booking.getTotalAmount().toPlainString() + "</p><p>Total verified payments: ₹" + verified.toPlainString() +
+                "</p><p class=\"amount\">Balance due: ₹0.00</p><h3>Verified installment receipts</h3><table><thead><tr><th>Receipt</th><th>Verified at</th><th>Amount</th></tr></thead><tbody>" +
+                rows + "</tbody></table><p>All payments listed above have been verified by VK Creation.</p><script>window.print()</script></body></html>";
+    }
+
+    private String html(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
     private BookingDtos.BookingResponse response(Booking booking) {
         BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
         return BookingDtos.BookingResponse.from(booking, verified);
