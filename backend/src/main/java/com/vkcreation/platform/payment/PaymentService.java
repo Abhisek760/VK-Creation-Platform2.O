@@ -152,6 +152,9 @@ public class PaymentService {
         if (payment.getStatus() != PaymentStatus.SUBMITTED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment has already been reviewed.");
         }
+        if ("PHONEPE".equalsIgnoreCase(payment.getMethod())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "PhonePe payments must be verified against PhonePe's server-side order status, not manually approved.");
+        }
         if (approved) {
             BigDecimal alreadyVerified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
             BigDecimal totalAfterPayment = alreadyVerified.add(payment.getAmount());
