@@ -13,15 +13,16 @@ public final class BookingDtos {
                                @Size(max=4000) String notes) {}
     public record AmountRequest(@NotNull @DecimalMin("0.00") BigDecimal totalAmount,
                                 @NotNull @DecimalMin("0.00") BigDecimal advanceAmount) {}
+    public record InstallmentRequest(@NotNull @DecimalMin("0.01") BigDecimal amount) {}
     public record StatusRequest(@NotNull BookingStatus status) {}
     public record BookingResponse(String id, String bookingCode, String clientName, String clientEmail,
                                   String clientPhone, String eventType, LocalDate eventDate, String eventLocation,
-                                  String packageName, BigDecimal totalAmount, BigDecimal advanceAmount,
+                                  String packageName, BigDecimal totalAmount, BigDecimal advanceAmount, BigDecimal currentDueAmount,
                                   BigDecimal remainingBalance, BookingStatus status, String notes) {
         static BookingResponse from(Booking b) {
             return new BookingResponse(b.getId(), b.getBookingCode(), b.getClientName(), b.getClientEmail(),
                     b.getClientPhone(), b.getEventType(), b.getEventDate(), b.getEventLocation(), b.getPackageName(),
-                    b.getTotalAmount(), b.getAdvanceAmount(), b.getTotalAmount().subtract(b.getAdvanceAmount()),
+                    b.getTotalAmount(), b.getAdvanceAmount(), b.getCurrentDueAmount(), b.getTotalAmount().subtract(b.getAdvanceAmount()),
                     b.getStatus(), b.getNotes());
         }
     }
