@@ -55,6 +55,29 @@ public class BookingService {
     }
 
     @Transactional
+    public BookingDtos.BookingResponse setInstallment(String id, BookingDtos.InstallmentRequest request) {
+        Booking booking = get(id);
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED
+                || booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot set an installment for this booking status.");
+        }
+        BigDecimal verified = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.VERIFIED));
+        BigDecimal submitted = payments.sumAmountByBookingAndStatuses(booking.getId(), List.of(PaymentStatus.SUBMITTED));
+        if (submitted.compareTo(BigDecimal.ZERO) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Review the pending payment submission before setting the next installment.");
+        }
+        BigDecimal remaining = booking.getTotalAmount().subtract(verified);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "The booking is already fully paid.");
+        }
+        if (request.amount().compareTo(remaining) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Installment cannot exceed the remaining total balance of " + remaining + ".");
+        }
+        booking.setCurrentDueAmount(request.amount());
+        return BookingDtos.BookingResponse.from(bookings.save(booking));
+    }
+
+    @Transactional
     public BookingDtos.BookingResponse setStatus(String id, BookingStatus status) {
         Booking booking = get(id);
         if (status == BookingStatus.CONFIRMED) {
