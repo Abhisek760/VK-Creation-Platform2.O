@@ -57,6 +57,36 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
+    public String receiptHtml(String paymentId, UserAccount client) {
+        Payment payment = payments.findById(paymentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found."));
+        if (!payment.getBooking().getClient().getId().equals(client.getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found.");
+        }
+        if (payment.getStatus() != PaymentStatus.VERIFIED || payment.getReceiptNumber() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A receipt is available only after admin verifies the payment.");
+        }
+        Booking booking = payment.getBooking();
+        return "<!doctype html><html><head><meta charset=\"utf-8\"><title>Payment Receipt</title>" +
+                "<style>body{font:16px Arial,sans-serif;max-width:720px;margin:40px auto;padding:24px;color:#222}h1{margin-bottom:4px}.muted{color:#666}.line{border-top:1px solid #ddd;margin:20px 0}.amount{font-size:24px;font-weight:bold}</style></head><body>" +
+                "<h1>VK Creation</h1><p class=\"muted\">Payment receipt</p><div class=\"line\"></div>" +
+                "<p><b>Receipt no:</b> " + html(payment.getReceiptNumber()) + "</p>" +
+                "<p><b>Booking:</b> " + html(booking.getBookingCode()) + "</p>" +
+                "<p><b>Client:</b> " + html(booking.getClientName()) + "</p>" +
+                "<p><b>Event:</b> " + html(booking.getEventType()) + "</p>" +
+                "<p><b>Payment method:</b> " + html(payment.getMethod()) + "</p>" +
+                "<p><b>Transaction reference:</b> " + html(payment.getProviderReference() == null ? "—" : payment.getProviderReference()) + "</p>" +
+                "<p><b>Verified at:</b> " + html(String.valueOf(payment.getVerifiedAt())) + "</p>" +
+                "<div class=\"line\"></div><p class=\"amount\">Amount received: ₹" + payment.getAmount().toPlainString() + "</p>" +
+                "<p class=\"muted\">This receipt represents a payment verified by VK Creation.</p><script>window.print()</script></body></html>";
+    }
+
+    private String html(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    @Transactional(readOnly = true)
     public List<PaymentDtos.PaymentResponse> mine(UserAccount client) {
         return payments.findByBooking_Client_IdOrderByCreatedAtDesc(client.getId())
                 .stream().map(PaymentDtos.PaymentResponse::from).toList();
