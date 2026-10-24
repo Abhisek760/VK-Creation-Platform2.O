@@ -34,3 +34,15 @@ management:
     health:
       probes:
         enabled: true
+
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+  phonepe:
+    enabled: ${PHONEPE_ENABLED:false}
+    base-url: ${PHONEPE_BASE_URL:https://api-preprod.phonepe.com/apis/pg-sandbox}
+    client-id: ${PHONEPE_CLIENT_ID:}
+    client-secret: ${PHONEPE_CLIENT_SECRET:}
+    client-version: ${PHONEPE_CLIENT_VERSION:1}
+    redirect-url: ${PHONEPE_REDIRECT_URL:http://localhost:3000/portal}
