@@ -25,8 +25,8 @@ public class PaymentService {
    throw new ResponseStatusException(HttpStatus.CONFLICT, "Payments are not accepted for this booking status.");
   BigDecimal reserved = payments.sumAmountByBookingAndStatuses(bookingId, RESERVED_STATUSES);
   BigDecimal remaining = booking.getAdvanceAmount().subtract(reserved);
-  if (request.amount().compareTo(remaining) > 0)
-   throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment exceeds the remaining advance balance of " + remaining + ".");
+  if (request.amount().compareTo(remaining) != 0)
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment must exactly match the remaining advance amount of " + remaining + ".");
   Payment payment = payments.save(new Payment(UUID.randomUUID().toString(), booking, request.amount(), request.method().trim(), request.providerReference(), request.proofUrl()));
   if (booking.getStatus() == BookingStatus.APPROVED) booking.setStatus(BookingStatus.AWAITING_PAYMENT);
   return PaymentDtos.PaymentResponse.from(payment);
