@@ -34,6 +34,12 @@ public class BookingController {
         return service.setAmounts(id, request);
     }
 
+    @PatchMapping("/{id}/installment")
+    @PreAuthorize("hasRole('ADMIN')")
+    public BookingDtos.BookingResponse setInstallment(@PathVariable String id, @Valid @RequestBody BookingDtos.InstallmentRequest request) {
+        return service.setInstallment(id, request);
+    }
+
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public BookingDtos.BookingResponse setStatus(@PathVariable String id, @Valid @RequestBody BookingDtos.StatusRequest request) {
